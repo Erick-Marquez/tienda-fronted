@@ -1,0 +1,19 @@
+.first-course {
+    background: transparent;
+    border-color: var(--surface-400);
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    color: black;
+
+    &:enabled:hover {
+        background: transparent;
+        border-color: var(--surface-700);
+        color: black;
+    }
+
+    &:focus {
+        box-shadow: 0 0 0 1px var(--surface-700);
+        color: black;
+    }
+}

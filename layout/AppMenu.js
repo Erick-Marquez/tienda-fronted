@@ -13,6 +13,7 @@ const AppMenu = () => {
             items: [
                 { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/' },
                 { label: 'Punto de venta', icon: 'pi pi-fw pi-desktop', to: '/point-of-sale' },
+                { label: 'Ventas', icon: 'pi pi-fw pi-tags', to: '/sales' },
                 { label: 'Cajas', icon: 'pi pi-fw pi-money-bill', to: '/cashboxes' },
             ]
         },

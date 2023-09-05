@@ -34,6 +34,14 @@ const PointOfSalePage = () => {
 
     const [products, setProducts] = useState([])
 
+
+    useEffect(() => {
+        document.addEventListener("keydown", handleKeyDown)
+        return () => {
+          document.removeEventListener("keydown", handleKeyDown)
+        }
+    }, [])
+
     useEffect(() => {
         searchingProducts.current.focus()
 

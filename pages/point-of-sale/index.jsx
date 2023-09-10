@@ -7,6 +7,9 @@ import { AutoComplete } from 'primereact/autocomplete'
 import { Dialog } from 'primereact/dialog'
 import { Toast } from 'primereact/toast'
 
+import { ConfirmDialog } from 'primereact/confirmdialog'
+import { confirmDialog } from 'primereact/confirmdialog'
+
 import { InputTextarea } from "primereact/inputtextarea"
 
 import { DataTable } from 'primereact/datatable'
@@ -14,6 +17,10 @@ import { Column } from 'primereact/column'
 import { ColumnGroup } from 'primereact/columngroup'
 import { Row } from 'primereact/row'
 import { Button } from 'primereact/button'
+import { useEventListener } from 'primereact/hooks'
+import { ProductService } from '../../services/ProductService'
+import { SaleService } from '../../services/SaleService'
+import { ticketPdf } from '../../libs/pdf/ticketPdf'
         
 
 const PointOfSalePage = () => {
@@ -27,36 +34,127 @@ const PointOfSalePage = () => {
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [filteredProducts, setFilteredProducts] = useState([])
     const [isVisibleDialogProductWeighable, setIsVisibleDialogProductWeighable] = useState(false)
-    const [productWighable,setProductWeighable] = useState({})
+    const [productWighable, setProductWeighable] = useState({})
     const priceProductWighable = useRef(null)
     const searchingProducts = useRef(null)
 
 
     const [products, setProducts] = useState([])
 
+    const [bindKeyDown, unbindKeyDown] = useEventListener({
+        type: 'keydown',
+        listener: (e) => {
+            handleKeyDown(e)
+        }
+    })
 
     useEffect(() => {
-        document.addEventListener("keydown", handleKeyDown)
+        bindKeyDown()
+
         return () => {
-          document.removeEventListener("keydown", handleKeyDown)
+            unbindKeyDown()
+        };
+    }, [bindKeyDown, unbindKeyDown])
+
+    function handleKeyDown(e) {
+        if (e.key === "F2") {
+            console.log(e);
+            confirmDialog({
+                message: '¿Quieres guardar la venta?',
+                header: 'Confirmación',
+                icon: 'pi pi-exclamation-triangle',
+                acceptLabel: 'Si',
+                accept: () => {
+                    saveSale()
+                    bindKeyDown()
+                },
+                reject: () => {
+                    toast.current.show({ severity: 'warn', summary: 'Rechazado', detail: 'Se ha rechazado la venta', life: 3000 })
+                    bindKeyDown()
+                }
+            }) 
+            unbindKeyDown()
         }
-    }, [])
+    }
+
+    // useEffect(() => {
+    //     function handleKeyDown(e) {
+
+    //         const accept = () => {
+    //             saveSale()
+    //             document.addEventListener("keydown", handleKeyDown)
+    //         }
+        
+    //         const reject = () => {
+    //             toast.current.show({ severity: 'warn', summary: 'Rechazado', detail: 'Se ha rechazado la venta', life: 3000 })
+    //             document.addEventListener("keydown", handleKeyDown)
+    //         }
+
+    //         if (e.key === "F2") {
+    //             console.log(e);
+    //             confirmDialog({
+    //                 message: '¿Quieres guardar la venta?',
+    //                 header: 'Confirmación',
+    //                 icon: 'pi pi-exclamation-triangle',
+    //                 acceptLabel: 'Si',
+    //                 accept,
+    //                 reject
+    //             }) 
+    //             document.removeEventListener("keydown", handleKeyDown) 
+    //         }
+    //     }
+
+    //     document.addEventListener("keydown", handleKeyDown)
+    //     return () => {
+    //       document.removeEventListener("keydown", handleKeyDown)
+    //     }
+    // }, [])
 
     useEffect(() => {
         searchingProducts.current.focus()
 
         // CountryService.getCountries().then((data) => setCountries(data));
-        setAllProducts([
-            { name: 'Galleta Soda', code: '1111', price: 1, isWeighable: false },
-            { name: 'Trident', code: '2222', price: 1.2, isWeighable: false },
-            { name: 'Papas Lays', code: '3333', price: 1.5, isWeighable: false },
-            { name: 'Sporade 550ml', code: '4444', price: 2, isWeighable: false },
-            { name: 'Apio', code: '5555', price: 1, isWeighable: true },
-            { name: 'Pollo', code: '6666', price: 1, isWeighable: true },
-            { name: 'Arroz', code: '7777', price: 4, isWeighable: true },
-        ])
+
+        ProductService.getAll()
+        .then(data => setAllProducts(data.data.map(p => ({...p, sale_price: parseFloat(p.sale_price)}))))
+        // setAllProducts([
+        //     { name: 'Galleta Soda', internal_code: '1111', sale_price: 1, is_weighable: false },
+        //     { name: 'Trident', internal_code: '2222', sale_price: 1.2, is_weighable: false },
+        //     { name: 'Papas Lays', internal_code: '3333', sale_price: 1.5, is_weighable: false },
+        //     { name: 'Sporade 550ml', internal_code: '4444', sale_price: 2, is_weighable: false },
+        //     { name: 'Apio', internal_code: '5555', sale_price: 1, is_weighable: true },
+        //     { name: 'Pollo', internal_code: '6666', sale_price: 1, is_weighable: true },
+        //     { name: 'Arroz', internal_code: '7777', sale_price: 4, is_weighable: true },
+        // ])
 
     }, [])
+
+    function saveSale() {
+        console.log(products)
+
+        const body = {
+            details: products
+        }
+
+        SaleService.create(body)
+        .then(res => {
+            console.log(res);
+            toast.current.show({ 
+                severity: 'success', 
+                summary: 'Confirmado', 
+                detail: `Se ha realizado la venta ${res.data.serie.serie}-${res.data.document_number}`, 
+                life: 3000
+            })
+            setProducts([])
+            ticketPdf(res.data)
+            searchingProducts.current.focus()
+        })
+        .catch(err => {
+            console.log(err);
+            toast.current.show({ severity: 'error', summary: 'Error', detail: 'Ocurrio un incoveniente', life: 3000 })
+        })
+        
+    }
 
     const searchProduct = (event) => {
         let _filteredProducts
@@ -67,7 +165,7 @@ const PointOfSalePage = () => {
         else {
             _filteredProducts = allProducts.filter((product) => {
                 return product.name.toLowerCase().startsWith(event.query.toLowerCase()) 
-                || product.code.toLowerCase().startsWith(event.query.toLowerCase()) 
+                || product.internal_code.toLowerCase().startsWith(event.query.toLowerCase()) 
             })
         }
 
@@ -80,20 +178,20 @@ const PointOfSalePage = () => {
         let _products = [...products]
         let _selectedProduct = {...event.value}
 
-        if (_selectedProduct.isWeighable) {
+        if (_selectedProduct.is_weighable) {
             setIsVisibleDialogProductWeighable(true)
             setProductWeighable(_selectedProduct)
         }
         else {
-            let index = _products.findIndex(p => p.code === _selectedProduct.code)
+            let index = _products.findIndex(p => p.internal_code === _selectedProduct.internal_code)
             if (index !== -1) {
                 _products[index].quantity += 1
-                _products[index].total += _selectedProduct.price
+                _products[index].total += _selectedProduct.sale_price
             } else {
                 _products.push({
                     ..._selectedProduct,
                     quantity: 1,
-                    total: _selectedProduct.price
+                    total: _selectedProduct.sale_price
                 })
             }
             setProducts(_products)
@@ -107,13 +205,15 @@ const PointOfSalePage = () => {
         let _products = [...products]
         let _selectedProduct = {...productWighable}
 
-        let index = _products.findIndex(p => p.code === _selectedProduct.code)
+        let index = _products.findIndex(p => p.internal_code === _selectedProduct.internal_code)
         if (index !== -1) {
+            _products[index].sale_price += Number(priceProductWighable.current.ariaValueNow)
             _products[index].total += Number(priceProductWighable.current.ariaValueNow)
         } else {
             _products.push({
                 ..._selectedProduct,
                 quantity: 1,
+                sale_price: Number(priceProductWighable.current.ariaValueNow),
                 total: Number(priceProductWighable.current.ariaValueNow)
             })
         }
@@ -155,7 +255,7 @@ const PointOfSalePage = () => {
         let _products = [...products]
         let _selectedProduct = {...productDeleted}
 
-        let index = _products.findIndex(p => p.code === _selectedProduct.code)
+        let index = _products.findIndex(p => p.internal_code === _selectedProduct.internal_code)
         if (index !== -1) {
             _products.splice(index, 1)
         } else {
@@ -178,7 +278,7 @@ const PointOfSalePage = () => {
     const actions = (row) => {
         return (
             <div className='flex justify-content-center'>
-                <Button className={styles['btn-table']} icon="pi pi-pencil" aria-label="Filter" severity="warning" size="small" onClick={(e)=>{console.log(e)}} />
+                <Button className={styles['btn-table']} icon="pi pi-pencil" aria-label="Filter" severity="warning" size="small" />
                 <Button 
                     className={styles['btn-table']} 
                     icon="pi pi-trash" 
@@ -193,6 +293,7 @@ const PointOfSalePage = () => {
 
     return (<>
         <Toast ref={toast} />
+        <ConfirmDialog />
         
         <div className="grid">
             <div className="col-12">
@@ -214,7 +315,7 @@ const PointOfSalePage = () => {
                             // onKeyPress={e => console.log(e)}
                         />
                         <Dialog 
-                            header="Asignar Peso" 
+                            header="Asignar Precio" 
                             visible={isVisibleDialogProductWeighable}
                             onShow={() => priceProductWighable.current.focus()}
                             onHide={() => setIsVisibleDialogProductWeighable(false)}
@@ -241,10 +342,10 @@ const PointOfSalePage = () => {
                         </Dialog>
                     </div>
                     <DataTable value={products} footerColumnGroup={tableFooterGroup} tableStyle={{ minWidth: '50rem' }}>
-                        <Column alignHeader="center" align="center" field="code" header="Código"></Column>
+                        <Column alignHeader="center" align="center" field="internal_code" header="Código"></Column>
                         <Column field="name" header="Descripcion"></Column>
                         <Column alignHeader="center" align="center" field="quantity" header="Cantidad"></Column>
-                        <Column alignHeader="center" field="price" header="Precio" body={convertToPrice}></Column>
+                        <Column alignHeader="center" field="sale_price" header="Precio" body={convertToPrice}></Column>
                         <Column alignHeader="center" field="total" header="Total" body={convertToPrice}></Column>
                         <Column alignHeader="center" align="center" header="Acciones" body={actions}></Column>
                     </DataTable>

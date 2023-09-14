@@ -158,14 +158,15 @@ const PointOfSalePage = () => {
 
     const searchProduct = (event) => {
         let _filteredProducts
+        console.log(event);
 
         if (!event.query.trim().length) {
             _filteredProducts = [...allProducts]
         }
         else {
             _filteredProducts = allProducts.filter((product) => {
-                return product.name.toLowerCase().startsWith(event.query.toLowerCase()) 
-                || product.internal_code.toLowerCase().startsWith(event.query.toLowerCase()) 
+                return product.name.toLowerCase().includes(event.query.toLowerCase()) 
+                || product.internal_code.toLowerCase() === event.query.toLowerCase()
             })
         }
 

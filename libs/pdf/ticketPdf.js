@@ -85,9 +85,9 @@ function ticketPdf(sale){
 
     // pdf.setFontSize(11);pdf.text(sale.serie.voucher_type.description.toUpperCase(),width/2, y+=7,{align: "center"})
     // pdf.setFontSize(11);pdf.text(`${sale.serie.serie}-${String(sale.document_number).padStart(8,'0')}`.toUpperCase(),width/2, y+=5,{align: "center"})
-
+    pdf.autoPrint()
     pdf.output('dataurlnewwindow')
-    pdf.autoPrint(false)
+    // pdf.autoPrint(false)
 
 }
 

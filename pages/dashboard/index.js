@@ -7,27 +7,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { ProductService } from '../../demo/service/ProductService';
 import { LayoutContext } from '../../layout/context/layoutcontext';
 import Link from 'next/link';
-const lineData = {
-    labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-    datasets: [
-        {
-            label: 'First Dataset',
-            data: [65, 59, 80, 81, 56, 55, 40],
-            fill: false,
-            backgroundColor: '#2f4860',
-            borderColor: '#2f4860',
-            tension: 0.4
-        },
-        {
-            label: 'Second Dataset',
-            data: [28, 48, 40, 19, 86, 27, 90],
-            fill: false,
-            backgroundColor: '#00bb7e',
-            borderColor: '#00bb7e',
-            tension: 0.4
-        }
-    ]
-};
+import { DashboardService } from '../../services/DashboardService';
 
 const Dashboard = () => {
     const [products, setProducts] = useState(null);
@@ -35,6 +15,30 @@ const Dashboard = () => {
     const menu2 = useRef(null);
     const [lineOptions, setLineOptions] = useState(null);
     const { layoutConfig } = useContext(LayoutContext);
+
+    const [dashboardData, setDashboardData] = useState(null);
+
+    const [lineData, setLineData] = useState({
+        labels: ['3-4am', '6-8am', '9-11am', '12-2pm', '3-5pm', '6-8pm', '9-11pm', '12-2am'],
+        datasets: [
+            // {
+            //     label: 'First Dataset',
+            //     data: [65, 59, 80, 81, 56, 55, 40],
+            //     fill: false,
+            //     backgroundColor: '#2f4860',
+            //     borderColor: '#2f4860',
+            //     tension: 0.4
+            // },
+            {
+                label: 'Total venta',
+                data: [28, 48, 40, 19, 86, 27, 90],
+                fill: false,
+                backgroundColor: '#00bb7e',
+                borderColor: '#00bb7e',
+                tension: 0.4
+            }
+        ]
+    });
 
     const applyLightTheme = () => {
         const lineOptions = {
@@ -102,6 +106,26 @@ const Dashboard = () => {
 
     useEffect(() => {
         ProductService.getProductsSmall().then((data) => setProducts(data));
+
+        DashboardService.index()
+            .then(
+                (data) => {
+                    setDashboardData(data.data)
+                    setLineData({
+                        ...lineData,
+                        datasets: [
+                            {
+                                ...lineData.datasets[0],
+                                data: data.data.chart ?? []
+                            }
+                        ]
+                    })
+                }
+            )
+            .catch(
+                
+            )
+
     }, []);
 
     useEffect(() => {
@@ -122,38 +146,38 @@ const Dashboard = () => {
                 <div className="card mb-0">
                     <div className="flex justify-content-between mb-3">
                         <div>
-                            <span className="block text-500 font-medium mb-3">Orders</span>
-                            <div className="text-900 font-medium text-xl">152</div>
+                            <span className="block text-500 font-medium mb-3">Ventas</span>
+                            <div className="text-900 font-medium text-xl">{ dashboardData?.general?.sales_count?.today ?? 0 }</div>
                         </div>
                         <div className="flex align-items-center justify-content-center bg-blue-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
                             <i className="pi pi-shopping-cart text-blue-500 text-xl" />
                         </div>
                     </div>
-                    <span className="text-green-500 font-medium">24 new </span>
-                    <span className="text-500">since last visit</span>
+                    <span className={`text-${dashboardData?.general?.sales_count?.difference > 0 ? 'green' : 'red'}-500 font-medium`}>{ dashboardData?.general?.sales_count?.difference ?? 0 } ventas </span>
+                    <span className="text-500">{dashboardData?.general?.sales_count?.difference > 0 ? 'más' : 'menos'} que ayer ({ dashboardData?.general?.sales_count?.yesterday ?? 0 })</span>
                 </div>
             </div>
             <div className="col-12 lg:col-6 xl:col-3">
                 <div className="card mb-0">
                     <div className="flex justify-content-between mb-3">
                         <div>
-                            <span className="block text-500 font-medium mb-3">Revenue</span>
-                            <div className="text-900 font-medium text-xl">$2.100</div>
+                            <span className="block text-500 font-medium mb-3">Total</span>
+                            <div className="text-900 font-medium text-xl">S/. { dashboardData?.general?.sales_total?.today ?? 0 }</div>
                         </div>
                         <div className="flex align-items-center justify-content-center bg-orange-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
                             <i className="pi pi-map-marker text-orange-500 text-xl" />
                         </div>
                     </div>
-                    <span className="text-green-500 font-medium">%52+ </span>
-                    <span className="text-500">since last week</span>
+                    <span className={`text-${dashboardData?.general?.sales_total?.difference > 0 ? 'green' : 'red'}-500 font-medium`}>S/. { dashboardData?.general?.sales_total?.difference ?? 0 } </span>
+                    <span className="text-500">{dashboardData?.general?.sales_total?.difference > 0 ? 'más' : 'menos'} que ayer (S/. { dashboardData?.general?.sales_total?.yesterday ?? 0 })</span>
                 </div>
             </div>
             <div className="col-12 lg:col-6 xl:col-3">
                 <div className="card mb-0">
                     <div className="flex justify-content-between mb-3">
                         <div>
-                            <span className="block text-500 font-medium mb-3">Customers</span>
-                            <div className="text-900 font-medium text-xl">28441</div>
+                            <span className="block text-500 font-medium mb-3">Productos</span>
+                            <div className="text-900 font-medium text-xl">{ dashboardData?.general?.products_sum ?? 0}</div>
                         </div>
                         <div className="flex align-items-center justify-content-center bg-cyan-100 border-round" style={{ width: '2.5rem', height: '2.5rem' }}>
                             <i className="pi pi-inbox text-cyan-500 text-xl" />
@@ -181,36 +205,8 @@ const Dashboard = () => {
 
             <div className="col-12 xl:col-6">
                 <div className="card">
-                    <h5>Recent Sales</h5>
-                    <DataTable value={products} rows={5} paginator responsiveLayout="scroll">
-                        <Column header="Image" body={(data) => <img className="shadow-2" src={`/demo/images/product/${data.image}`} alt={data.image} width="50" />} />
-                        <Column field="name" header="Name" sortable style={{ width: '35%' }} />
-                        <Column field="price" header="Price" sortable style={{ width: '35%' }} body={(data) => formatCurrency(data.price)} />
-                        <Column
-                            header="View"
-                            style={{ width: '15%' }}
-                            body={() => (
-                                <>
-                                    <Button icon="pi pi-search" type="button" text />
-                                </>
-                            )}
-                        />
-                    </DataTable>
-                </div>
-                <div className="card">
                     <div className="flex justify-content-between align-items-center mb-5">
-                        <h5>Best Selling Products</h5>
-                        <div>
-                            <Button type="button" icon="pi pi-ellipsis-v" className="p-button-rounded p-button-text p-button-plain" onClick={(event) => menu1.current.toggle(event)} />
-                            <Menu
-                                ref={menu1}
-                                popup
-                                model={[
-                                    { label: 'Add New', icon: 'pi pi-fw pi-plus' },
-                                    { label: 'Remove', icon: 'pi pi-fw pi-minus' }
-                                ]}
-                            />
-                        </div>
+                        <h5>Productos más vendidos</h5>
                     </div>
                     <ul className="list-none p-0 m-0">
                         <li className="flex flex-column md:flex-row md:align-items-center md:justify-content-between mb-4">
@@ -287,9 +283,33 @@ const Dashboard = () => {
                         </li>
                     </ul>
                 </div>
+                {/* <div className="card">
+                    <h5>Recent Sales</h5>
+                    <DataTable value={products} rows={5} paginator responsiveLayout="scroll">
+                        <Column header="Image" body={(data) => <img className="shadow-2" src={`/demo/images/product/${data.image}`} alt={data.image} width="50" />} />
+                        <Column field="name" header="Name" sortable style={{ width: '35%' }} />
+                        <Column field="price" header="Price" sortable style={{ width: '35%' }} body={(data) => formatCurrency(data.price)} />
+                        <Column
+                            header="View"
+                            style={{ width: '15%' }}
+                            body={() => (
+                                <>
+                                    <Button icon="pi pi-search" type="button" text />
+                                </>
+                            )}
+                        />
+                    </DataTable>
+                </div> */}
+            </div>
+            <div className="col-12 xl:col-6">
+                <div className="card">
+                    <h5>Resumen de Ventas</h5>
+                    <Chart type="line" data={lineData} options={lineOptions} />
+                </div>
             </div>
 
-            <div className="col-12 xl:col-6">
+
+            {/* <div className="col-12 xl:col-6">
                 <div className="card">
                     <h5>Sales Overview</h5>
                     <Chart type="line" data={lineData} options={lineOptions} />
@@ -374,7 +394,7 @@ const Dashboard = () => {
                         </Link>
                     </div>
                 </div>
-            </div>
+            </div> */}
         </div>
     );
 };

@@ -40,99 +40,85 @@ const PointOfSalePage = () => {
 
 
     const [products, setProducts] = useState([])
+    const [typeOfPayment, setTypeOfPayment] = useState([])
 
-    const [bindKeyDown, unbindKeyDown] = useEventListener({
+
+    const [modalPaymentsIsVisible, setModalPaymentsIsVisible] = useState(false)
+    const [modalPrintTicketIsVisible, setModalPrintTicketIsVisible] = useState(false)
+
+    const [step, setStep] = useState(1)
+    const [bindKey, unbindKey] = useEventListener({
         type: 'keydown',
-        listener: (e) => {
-            handleKeyDown(e)
-        }
+        listener: (e) => handleKey(e)
     })
 
     useEffect(() => {
-        bindKeyDown()
+        bindKey()
+        return () => unbindKey()
+    }, [bindKey, unbindKey])
 
-        return () => {
-            unbindKeyDown()
-        };
-    }, [bindKeyDown, unbindKeyDown])
-
-    function handleKeyDown(e) {
-        if (e.key === "F2") {
-            console.log(e);
-            confirmDialog({
-                message: '¿Quieres guardar la venta?',
-                header: 'Confirmación',
-                icon: 'pi pi-exclamation-triangle',
-                acceptLabel: 'Si',
-                accept: () => {
-                    saveSale()
-                    bindKeyDown()
-                },
-                reject: () => {
-                    toast.current.show({ severity: 'warn', summary: 'Rechazado', detail: 'Se ha rechazado la venta', life: 3000 })
-                    bindKeyDown()
-                }
-            }) 
-            unbindKeyDown()
+    function handleKey(e) {
+        const fun = {
+            1: (e) => step1(e),
+            2: (e) => step2(e),
+            3: (e) => step3(e),
+            4: (e) => step4(e),
+        }
+        fun[step](e)
+    }
+    
+    function step1(e) {
+        if (e.key === 'F2') {
+            setModalPaymentsIsVisible(true)
+            setStep(2)
         }
     }
 
-    // useEffect(() => {
-    //     function handleKeyDown(e) {
+    function step2(e) {
+        if (['1', '2'].includes(e.key)) {
+            setModalPaymentsIsVisible(false)
+            setModalPrintTicketIsVisible(true)
+            setTypeOfPayment(e.key)
+            setStep(3)
+        }
+    }
 
-    //         const accept = () => {
-    //             saveSale()
-    //             document.addEventListener("keydown", handleKeyDown)
-    //         }
+    function step3(e) {
+        if (e.key === '1') {
+            saveSale({ticket: false})
+            setModalPrintTicketIsVisible(false)
+            setStep(1)
+        }
+        if (e.key === '2') {
+            saveSale({ticket: true})
+            setModalPrintTicketIsVisible(false)
+            setStep(1)
+        }
+    }
+
+    function step4(e) {
         
-    //         const reject = () => {
-    //             toast.current.show({ severity: 'warn', summary: 'Rechazado', detail: 'Se ha rechazado la venta', life: 3000 })
-    //             document.addEventListener("keydown", handleKeyDown)
-    //         }
+    }
 
-    //         if (e.key === "F2") {
-    //             console.log(e);
-    //             confirmDialog({
-    //                 message: '¿Quieres guardar la venta?',
-    //                 header: 'Confirmación',
-    //                 icon: 'pi pi-exclamation-triangle',
-    //                 acceptLabel: 'Si',
-    //                 accept,
-    //                 reject
-    //             }) 
-    //             document.removeEventListener("keydown", handleKeyDown) 
-    //         }
-    //     }
-
-    //     document.addEventListener("keydown", handleKeyDown)
-    //     return () => {
-    //       document.removeEventListener("keydown", handleKeyDown)
-    //     }
-    // }, [])
+    
 
     useEffect(() => {
         searchingProducts.current.focus()
-
-        // CountryService.getCountries().then((data) => setCountries(data));
-
         ProductService.getAll()
         .then(data => setAllProducts(data.data.map(p => ({...p, sale_price: parseFloat(p.sale_price)}))))
-        // setAllProducts([
-        //     { name: 'Galleta Soda', internal_code: '1111', sale_price: 1, is_weighable: false },
-        //     { name: 'Trident', internal_code: '2222', sale_price: 1.2, is_weighable: false },
-        //     { name: 'Papas Lays', internal_code: '3333', sale_price: 1.5, is_weighable: false },
-        //     { name: 'Sporade 550ml', internal_code: '4444', sale_price: 2, is_weighable: false },
-        //     { name: 'Apio', internal_code: '5555', sale_price: 1, is_weighable: true },
-        //     { name: 'Pollo', internal_code: '6666', sale_price: 1, is_weighable: true },
-        //     { name: 'Arroz', internal_code: '7777', sale_price: 4, is_weighable: true },
-        // ])
-
     }, [])
 
-    function saveSale() {
-        console.log(products)
+    function closeSaleProcess() {
+        setModalPaymentsIsVisible(false)
+        setModalPrintTicketIsVisible(false)
+
+        setStep(1)
+    }
+
+    function saveSale({ticket}) {
 
         const body = {
+            type_of_payment_id: typeOfPayment,
             details: products
         }
 
@@ -146,7 +132,9 @@ const PointOfSalePage = () => {
                 life: 3000
             })
             setProducts([])
-            ticketPdf(res.data)
+            if (ticket) {
+                ticketPdf(res.data)
+            }
             searchingProducts.current.focus()
         })
         .catch(err => {
@@ -158,7 +146,6 @@ const PointOfSalePage = () => {
 
     const searchProduct = (event) => {
         let _filteredProducts
-        console.log(event);
 
         if (!event.query.trim().length) {
             _filteredProducts = [...allProducts]
@@ -295,6 +282,74 @@ const PointOfSalePage = () => {
     return (<>
         <Toast ref={toast} />
         <ConfirmDialog />
+
+
+        <Dialog 
+            visible={modalPaymentsIsVisible} 
+            style={{ width: '50vw' }} 
+            onHide={() => closeSaleProcess()}
+            draggable={false}
+        >
+            <div className='flex justify-content-evenly'>
+                <div className='flex flex-column align-items-center'>
+                    <img alt="efectivo" src="/images/efectivo.png" width="200" className='mb-4'></img>
+                    <Button 
+                        className='flex flex-row-reverse' 
+                        label="Efectivo" 
+                        severity="secondary" 
+                        outlined 
+                        size='small' 
+                        icon={() => <img alt="icon" src="/icons/1.png" width="35" className='ml-2' />}
+                        onClick={() => step2({key: '1'})}
+                    />
+                </div>
+                <div className='flex flex-column align-items-center'>
+                    <img alt="tarjeta" src="/images/tarjeta.png" width="200" className='mb-4'></img>
+                    <Button 
+                        className='flex flex-row-reverse' 
+                        label="Tarjeta" 
+                        severity="secondary" 
+                        outlined 
+                        size='small' 
+                        icon={() => <img alt="icon" src="/icons/2.png" width="35" className='ml-2' />}
+                        onClick={() => step2({key: '2'})}
+                    />
+                </div>
+            </div>
+        </Dialog>
+
+        <Dialog 
+            visible={modalPrintTicketIsVisible} 
+            style={{ width: '30vw' }} 
+            onHide={() => closeSaleProcess()}
+            draggable={false}
+        >
+            <div className='flex justify-content-center mb-3'>
+                <img alt="imprimir" src="/images/imprimir.png" width="200" className='mb-4'></img>
+            </div>
+
+            <div className='flex justify-content-evenly'>
+                <Button 
+                    className='flex flex-row-reverse' 
+                    label="NO" 
+                    severity="secondary" 
+                    outlined 
+                    size='small' 
+                    icon={() => <img alt="icon" src="/icons/1.png" width="35" className='ml-2' />}
+                    onClick={() => step3({key: '1'})}
+                />
+                <Button 
+                    className='flex flex-row-reverse' 
+                    label="SI" 
+                    severity="secondary" 
+                    outlined 
+                    size='small' 
+                    icon={() => <img alt="icon" src="/icons/2.png" width="35" className='ml-2' />}
+                    onClick={() => step3({key: '2'})}
+                />
+            </div>
+        </Dialog>
+
         
         <div className="grid">
             <div className="col-12">
@@ -313,7 +368,6 @@ const PointOfSalePage = () => {
                             autoHighlight
                             onSelect={onSelectProduct}
                             ref={searchingProducts}
-                            // onKeyPress={e => console.log(e)}
                         />
                         <Dialog 
                             header="Asignar Precio" 

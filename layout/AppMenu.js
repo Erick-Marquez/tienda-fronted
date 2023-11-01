@@ -15,8 +15,24 @@ const AppMenu = () => {
                 { label: 'Punto de venta', icon: 'pi pi-fw pi-desktop', to: '/point-of-sale' },
                 { label: 'Ventas', icon: 'pi pi-fw pi-tags', to: '/sales' },
                 { label: 'Cajas', icon: 'pi pi-fw pi-money-bill', to: '/cashboxes' },
+                { label: 'Compras', icon: 'pi pi-fw pi-shopping-cart', to: '/purchases' },
+                {
+                    label: 'Sunat',
+                    // icon: 'pi pi-fw pi-bookmark',
+                    items: [
+                        { label: 'Comprobantes', icon: 'pi pi-fw pi-file', to: '/sunat/invoices' },
+                        { label: 'Resumenes', icon: 'pi pi-fw pi-copy', to: '/sunat/summaries' },
+                    ]
+                },
             ]
         },
+        // {
+        //     label: 'Utilities',
+        //     items: [
+        //         { label: 'PrimeIcons', icon: 'pi pi-fw pi-prime', to: '/utilities/icons' },
+        //         { label: 'PrimeFlex', icon: 'pi pi-fw pi-desktop', url: 'https://www.primefaces.org/primeflex/', target: '_blank' }
+        //     ]
+        // },
         // {
         //     label: 'UI Components',
         //     items: [

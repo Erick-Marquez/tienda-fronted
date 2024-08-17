@@ -6,6 +6,10 @@ export const SaleService = {
         return await BaseUrl.get("api/sales", { params: body })
     },
 
+    async getSale(id){
+        return await BaseUrl.get(`api/sales/${id}`)
+    },
+
     async create(body){
         return await BaseUrl.post("api/sales", body)
     },

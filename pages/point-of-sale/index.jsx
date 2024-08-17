@@ -21,6 +21,8 @@ import { useEventListener } from 'primereact/hooks'
 import { ProductService } from '../../services/ProductService'
 import { SaleService } from '../../services/SaleService'
 import { ticketPdf } from '../../libs/pdf/ticketPdf'
+import { compareTwoStrings } from 'string-similarity'
+import { SelectButton } from 'primereact/selectbutton'
         
 
 const PointOfSalePage = () => {
@@ -38,6 +40,9 @@ const PointOfSalePage = () => {
     const priceProductWighable = useRef(null)
     const searchingProducts = useRef(null)
 
+    const [timeoutId, setTimeoutId] = useState(null)
+    const searchOptions = ['Normal', 'Test-1', 'Test-2'];
+    const [searchMode, setSearchMode] = useState(searchOptions[0]);
 
     const [products, setProducts] = useState([])
     const [typeOfPayment, setTypeOfPayment] = useState([])
@@ -105,7 +110,20 @@ const PointOfSalePage = () => {
     useEffect(() => {
         searchingProducts.current.focus()
         ProductService.getAll()
-        .then(data => setAllProducts(data.data.map(p => ({...p, sale_price: parseFloat(p.sale_price)}))))
+        .then(data => setAllProducts(data.data.map(p => {
+
+            let string = p.name.toLowerCase()
+            let trigramas = []
+            for (let i = 0; i < string.length - 2; i++) {
+                trigramas.push(string.slice(i, i+3))
+            }
+
+            return {
+                ...p, 
+                sale_price: parseFloat(p.sale_price),
+                trigramas: trigramas
+            }
+        })))
     }, [])
 
     function closeSaleProcess() {
@@ -146,18 +164,88 @@ const PointOfSalePage = () => {
 
     const searchProduct = (event) => {
         let _filteredProducts
+        
 
-        if (!event.query.trim().length) {
-            _filteredProducts = [...allProducts]
+        // ROLLBACK
+        if (Number(event.query) === parseFloat(event.query) && event.query.length < 7) {
+            return setFilteredProducts([]);
         }
-        else {
-            _filteredProducts = allProducts.filter((product) => {
-                return product.name.toLowerCase().includes(event.query.toLowerCase()) 
-                || product.internal_code.toLowerCase() === event.query.toLowerCase()
-            })
+        if (Number(event.query) === parseFloat(event.query) && event.query.length >= 7) {
+            console.log(event.query);
+            let pro = allProducts.find((product) => product.internal_code.toLowerCase() === event.query.toLowerCase())
+            if (pro) {
+                onSelectProduct({ value: pro})
+            }
+            return setFilteredProducts([]);
         }
+        console.log('hola');
+        // ROLLBACK
 
-        setFilteredProducts(_filteredProducts)
+
+        clearTimeout(timeoutId);
+
+        setTimeoutId(setTimeout(function() {
+            if (!event.query.trim().length || event.query.trim().length < 2) {
+                _filteredProducts = []
+            }
+            else {
+                
+                if (searchMode == 'Normal') {
+                    _filteredProducts = allProducts.filter((product) => {
+                        return product.name.toLowerCase().includes(event.query.toLowerCase()) 
+                        || product.internal_code.toLowerCase() === event.query.toLowerCase()
+                    })
+                }
+                if (searchMode == 'Test-1') {
+                    // METODO 1
+                    let string = `  ${event.query.toLowerCase()} `
+                    let trigramas = []
+                    for (let i = 0; i < (string.length - 2); i++) {
+                        trigramas.push(string.substring(i, i+3))
+                    }
+
+                    _filteredProducts = []
+                    allProducts.forEach(product => {
+                        let filter = product.trigramas.filter(t => trigramas.includes(t));
+                        if (filter.length > 1) {
+                            _filteredProducts.push({
+                                ...product,
+                                rate: filter.length
+                            })
+                        }
+                    })
+                    _filteredProducts = _filteredProducts.sort((a,b) => a.rate - b.rate).reverse().slice(0, 10)
+                }
+                if (searchMode == 'Test-2') {
+                    //METODO 2
+                    _filteredProducts = []
+                    allProducts.forEach(product => {
+                        let rate = compareTwoStrings(product.name.toLowerCase(), event.query.toLowerCase())
+                        if (rate > 0) {
+                            _filteredProducts.push({
+                                ...product,
+                                rate: rate
+                            })
+                        }
+                    })
+                    _filteredProducts = _filteredProducts.sort((a,b) => a.rate - b.rate).reverse().slice(0, 10)
+                }
+            }
+
+            setFilteredProducts(_filteredProducts)
+        }, 500))
+
+        // if (!event.query.trim().length) {
+        //     _filteredProducts = [...allProducts]
+        // }
+        // else {
+        //     _filteredProducts = allProducts.filter((product) => {
+        //         return product.name.toLowerCase().includes(event.query.toLowerCase()) 
+        //         || product.internal_code.toLowerCase() === event.query.toLowerCase()
+        //     })
+        // }
+
+        // setFilteredProducts(_filteredProducts)
     }
 
     const onSelectProduct = (event) => {
@@ -279,6 +367,37 @@ const PointOfSalePage = () => {
         )
     }
 
+    const itemTemplate = (item) => {
+        return (
+            <div className="flex align-items-center">
+                <div style={{width: "80px"}}>
+                    <div
+                        style={{
+                            width: "90px",
+                            height: "100%",
+                            marginTop: "-1.4rem",
+                            borderRight: "1px solid gray",
+                            position: "absolute",
+                            display: "flex",
+                            //justifyContent: "space-between",
+                            justifyContent: "flex-end",
+                            alignItems: "center",
+                            marginLeft: "-1.25rem",
+                            paddingRight: "0.5rem",
+                            paddingLeft: "0.5rem",
+                            fontWeight: "bold"
+                        }}
+                    >
+                        <span>S/. {item.sale_price.toFixed(2)}</span>
+                        {/* <span>S/. </span>
+                        <span>{item.sale_price.toFixed(2)}</span> */}
+                    </div>
+                </div>
+                <div>{item.name}</div>
+            </div>
+        );
+    };
+
     return (<>
         <Toast ref={toast} />
         <ConfirmDialog />
@@ -354,10 +473,17 @@ const PointOfSalePage = () => {
         <div className="grid">
             <div className="col-12">
                 <div className="card">
+                    {/* <div className='absolute'>
+                        <label>
+                            Tipo de buscador
+                        </label>
+                        <SelectButton value={searchMode} onChange={(e) => setSearchMode(e.value)} options={searchOptions} />
+                    </div> */}
 
                     <div className="flex justify-content-center my-4">
+
                         <AutoComplete 
-                            className='p-0 col-12 md:col-6 xl:col-4' 
+                            className='p-0 col-12 md:col-6 xl:col-4 p-inputtext-lg' 
                             inputClassName='w-full'
                             field='name'
                             value={selectedProduct}
@@ -368,6 +494,7 @@ const PointOfSalePage = () => {
                             autoHighlight
                             onSelect={onSelectProduct}
                             ref={searchingProducts}
+                            itemTemplate={itemTemplate}
                         />
                         <Dialog 
                             header="Asignar Precio" 

@@ -11,12 +11,12 @@ import { Button } from 'primereact/button'
 import { Dialog } from 'primereact/dialog'
 import { Calendar } from 'primereact/calendar'
 import { Dropdown } from 'primereact/dropdown'
-import { InputNumber } from 'primereact/inputnumber'
-import { SunatService } from '../../services/SunatService'
 
 import { SplitButton } from 'primereact/splitbutton'
 import { SaleService } from '../../services/SaleService'
 import moment from 'moment/moment'
+import { ticketPdf } from '../../libs/pdf/ticketPdf'
+// import printJS from 'print-js'
         
 
 const SalePage = () => {
@@ -126,6 +126,29 @@ const SalePage = () => {
                         setDocumentNumber('00000000')
                         setCustomerName('Clientes varios')
                         setModalConvertInvoiceIsVisible(true)
+                    }
+                },
+                {
+                    label: 'Imprimir recibo',
+                    icon: 'pi pi-print',
+                    command: () => {
+                        // printJS('prueba', 'html')
+                        SaleService.getSale(rowData.id)
+                        .then(res => {
+
+                            res.data.total = Number(res.data.total)
+
+                            for (const iterator of res.data.sale_details) {
+                                iterator.name = iterator.product.name
+                                iterator.sale_price = Number(iterator.price)
+                                iterator.total = Number(iterator.total)
+                            }
+                            ticketPdf(res.data)
+                        })
+                        .catch(err => {
+                            console.log(err);
+                            toast.current.show({ severity: 'error', summary: 'Error', detail: 'Ocurrio un incoveniente', life: 3000 })
+                        })
                     }
                 }
             ]} />
